@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simple Cart - Fake Store API</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f7f9fc;
+      margin: 0;
+      padding: 20px;
+    }
+    h2, h3 {
+      text-align: center;
+      color: #333;
+    }
+    #productList {
+      display: grid;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .product-card, .cart-item {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 10px;
+      border-radius: 5px;
+    }
+    #cartItems {
+      margin-top: 20px;
+    }
+    #cartItems p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h2>Fake Store Cart</h2>
+  <div id="productList"></div>
+
+  <hr>
+
+  <div id="summary">
+    <h3>Cart Summary</h3>
+    <p id="cartCount">Items in Cart: 0</p>
+    <div id="cartItems"></div>
+    <p id="totalAmount">Subtotal: $0.00</p>
+    <p id="bulkDiscount">Quantity Discount (10%): -$0.00</p>
+    <p id="valueDiscount">Price Discount (5%): -$0.00</p>
+    <h3 id="grandTotal">Final Total: $0.00</h3>
+  </div>
+
+  <script>
+    const userCart = [];
+
+    function fetchAllItems() {
+      return fetch("https://fakestoreapi.com/products")
+        .then(res => res.json());
+    }
+
+    function showAllItems(itemData) {
+      const section = document.getElementById("productList");
+      section.innerHTML = "";
+
+      itemData.forEach(prod => {
+        const card = document.createElement("div");
+        card.classList.add("product-card");
+        card.innerHTML = `
+          <h4>${prod.title}</h4>
+          <p><strong>Price:</strong> $${prod.price.toFixed(2)}</p>
+          <button id="add-${prod.id}">Add to Cart</button>
+        `;
+        section.appendChild(card);
+
+        document.getElementById(`add-${prod.id}`).addEventListener("click", function() {
+          insertIntoCart(prod.id, prod.title, prod.price);
+        });
+      });
+    }
+
+    function insertIntoCart(pid, pname, pprice) {
+      const existingItem = userCart.find(obj => obj.pid === pid);
+      if (existingItem) {
+        existingItem.qty += 1;
+      } else {
+        userCart.push({ pid, pname, pprice, qty: 1 });
+      }
+      updateCartDisplay();
+      computeFinalBill();
+    }
+
+    function updateCartDisplay() {
+      const cartDiv = document.getElementById("cartItems");
+      cartDiv.innerHTML = "";
+      let totalItems = 0;
+
+      userCart.forEach(item => {
+        totalItems += item.qty;
+        const p = document.createElement("p");
+        p.textContent = `${item.pname} - $${item.pprice.toFixed(2)} x ${item.qty}`;
+        cartDiv.appendChild(p);
+      });
+
+      document.getElementById("cartCount").textContent = `Items in Cart: ${totalItems}`;
+    }
+
+    function computeFinalBill() {
+      const baseTotal = userCart.reduce((sum, val) => sum + val.pprice * val.qty, 0);
+      const totalQty = userCart.reduce((sum, val) => sum + val.qty, 0);
+
+      let discountOnQty = 0;
+      let discountOnPrice = 0;
+
+      if (totalQty > 10) discountOnQty = baseTotal * 0.10;
+
+      const afterQtyDiscount = baseTotal - discountOnQty;
+
+      if (baseTotal > 500) discountOnPrice = afterQtyDiscount * 0.05;
+
+      const netTotal = afterQtyDiscount - discountOnPrice;
+
+      document.getElementById("totalAmount").textContent = `Subtotal: $${baseTotal.toFixed(2)}`;
+      document.getElementById("bulkDiscount").textContent = `Quantity Discount (10%): -$${discountOnQty.toFixed(2)}`;
+      document.getElementById("valueDiscount").textContent = `Price Discount (5%): -$${discountOnPrice.toFixed(2)}`;
+      document.getElementById("grandTotal").textContent = `Final Total: $${netTotal.toFixed(2)}`;
+    }
+
+    fetchAllItems()
+      .then(items => showAllItems(items))
+      .catch(err => console.error("Error fetching data:", err));
+  </script>
+</body>
+</html>
